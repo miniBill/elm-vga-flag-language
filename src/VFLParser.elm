@@ -27,16 +27,16 @@ type Item
 
 
 type Command
-    = Rectangle Point Point Value
-    | Ellipse Point Int Int Value
-    | Polygon Fill Point (List Point) Value
-    | Lines LineType Point (List Point) Value
-    | Image String
+    = Rectangle Value Value Value
+    | Ellipse Value Value Value Value
+    | Polygon Value Value Value Value
+    | Lines Value Value Value Value
+    | Image Value
 
 
 type Structure
-    = Vertical (List Color)
-    | Horizontal (List Color)
+    = Vertical (List Value)
+    | Horizontal (List Value)
 
 
 type Value
@@ -104,55 +104,42 @@ commandParser =
     Parser.oneOf
         [ Parser.succeed Rectangle
             |. symbol "Rectangle"
-            |= pointParser
+            |= valueParser
             |. symbol ","
-            |= pointParser
+            |= valueParser
             |. symbol ","
             |= valueParser
         , Parser.succeed Ellipse
             |. symbol "Ellipse"
-            |= pointParser
+            |= valueParser
             |. symbol ","
-            |= intParser
+            |= valueParser
             |. symbol ","
-            |= intParser
+            |= valueParser
             |. symbol ","
             |= valueParser
         , Parser.succeed Polygon
             |. symbol "Polygon"
-            |= fillParser
+            |= valueParser
             |. symbol ","
-            |= pointParser
+            |= valueParser
             |. symbol ","
-            |= pointListParser
+            |= valueParser
             |. symbol ","
             |= valueParser
         , Parser.succeed Lines
             |. symbol "Lines"
-            |= lineTypeParser
+            |= valueParser
             |. symbol ","
-            |= pointParser
+            |= valueParser
             |. symbol ","
-            |= pointListParser
+            |= valueParser
             |. symbol ","
             |= valueParser
         , Parser.succeed Image
             |. symbol "Image"
-            |= stringParser
+            |= valueParser
         ]
-
-
-pointListParser : Parser (List Point)
-pointListParser =
-    Parser.sequence
-        { start = "["
-        , spaces = spaces
-        , separator = ","
-        , item = pointParser
-        , end = "]"
-        , trailing = Parser.Forbidden
-        }
-        |. spaces
 
 
 fillParser : Parser Fill
@@ -198,7 +185,7 @@ structureParser =
             , separator = ""
             , spaces = spaces
             , trailing = Parser.Optional
-            , item = colorParser
+            , item = valueParser
             }
         |. spaces
 
@@ -270,6 +257,8 @@ valueParser =
             |. Parser.symbol "$"
             |= Parser.getChompedString (Parser.chompWhile isNameChar)
             |. spaces
+        , Parser.map Fill fillParser
+        , Parser.map LineType lineTypeParser
         ]
 
 

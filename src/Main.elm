@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import Browser
-import Color
+import Color exposing (Color)
 import Dict
 import Html exposing (Html)
 import Html.Attributes
@@ -35,13 +35,17 @@ init =
 $description="The Demisexual pride flag"
 // Unknown creator. Maybe research further?
 $textcolor=$black
+// The trick here is that we define the top&bottom colors twice, so this ends up looking like we have variable heights
 
+
+$center_stripe = RGB(110,  0,112)
+$bottom = RGB(210,210,210)
 vertical{
-\tRGB(255,255,255)
-\tRGB(255,255,255)
-\tRGB(110,  0,112)
-\tRGB(210,210,210)
-\tRGB(210,210,210)
+\t$white 
+\t$white
+\t$center_stripe
+\t$bottom
+\t$bottom
 }
 
 Polygon Filled, (0,0), [(0,0), (240,240), (0,480)], $black"""
@@ -143,7 +147,7 @@ displayVFL items =
                                 , Svg.y <| String.fromInt (slice * i)
                                 , Svg.width (String.fromInt width)
                                 , Svg.height (String.fromInt slice)
-                                , Svg.fill (Color.toCssString color)
+                                , Svg.fill (Color.toCssString (asColor <| eval env color))
                                 ]
                                 []
 
@@ -168,7 +172,7 @@ displayVFL items =
                                 , Svg.y "0"
                                 , Svg.width (String.fromInt slice)
                                 , Svg.height (String.fromInt height)
-                                , Svg.fill (Color.toCssString color)
+                                , Svg.fill (Color.toCssString (asColor (eval env color)))
                                 ]
                                 []
 
@@ -185,16 +189,19 @@ displayVFL items =
                 (Command (Ellipse _ _ _ _)) :: _ ->
                     Debug.todo "branch 'Command (Ellipse _ _ _ _) :: _' not implemented"
 
-                (Command (Polygon Filled start points color)) :: tail ->
-                    case eval env color of
-                        Color c ->
+                (Command (Polygon fillType start points color)) :: tail ->
+                    case asFill (eval env fillType) of
+                        Filled ->
                             let
+                                c =
+                                    asColor (eval env color)
+
                                 poly : Svg msg
                                 poly =
                                     Svg.polygon
                                         [ Svg.fill (Color.toCssString c)
-                                        , (start :: points)
-                                            |> List.map pointToString
+                                        , (start :: asList points)
+                                            |> List.map (asPoint >> pointToString)
                                             |> String.join " "
                                             |> Svg.points
                                         ]
@@ -202,14 +209,11 @@ displayVFL items =
                             in
                             go env tail (poly :: acc)
 
-                        _ ->
-                            Debug.todo (Debug.toString color ++ " is not a color ")
+                        Outlined ->
+                            Debug.todo "branch 'Outlined' not implemented"
 
-                (Command (Polygon Outlined _ _ _)) :: _ ->
-                    Debug.todo "branch 'Command (Polygon Outlined _ _ _) :: _' not implemented"
-
-                (Command (Polygon ThickOutlines _ _ _)) :: _ ->
-                    Debug.todo "branch 'Command (Polygon ThickOutlines _ _ _) :: _' not implemented"
+                        ThickOutlines ->
+                            Debug.todo "branch 'ThickOutlines' not implemented"
 
                 (Command (Lines _ _ _ _)) :: _ ->
                     Debug.todo "branch 'Command (Lines _ _ _ _) :: _' not implemented"
@@ -218,6 +222,46 @@ displayVFL items =
                     Debug.todo "branch 'Command (Image _) :: _' not implemented"
     in
     go VFLParser.defaultEnv items []
+
+
+asPoint : Value -> Point
+asPoint value =
+    case value of
+        Point p ->
+            p
+
+        _ ->
+            Debug.todo "asPoint"
+
+
+asList : Value -> List Value
+asList value =
+    case value of
+        List l ->
+            l
+
+        _ ->
+            Debug.todo "asList"
+
+
+asFill : Value -> Fill
+asFill value =
+    case value of
+        Fill f ->
+            f
+
+        _ ->
+            Debug.todo "asFill"
+
+
+asColor : Value -> Color
+asColor value =
+    case value of
+        Color c ->
+            c
+
+        _ ->
+            Debug.todo "asColor"
 
 
 pointToString : Point -> String

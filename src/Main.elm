@@ -72,18 +72,23 @@ view input =
             , Html.Attributes.cols 30
             ]
             []
-        , input
-            |> String.split "\n"
-            |> List.indexedMap
-                (\i l ->
-                    String.padLeft 3 ' ' (String.fromInt (i + 1))
-                        ++ " "
-                        ++ l
-                )
-            |> String.join "\n"
-            |> Html.text
-            |> List.singleton
-            |> Html.pre []
+        , case Parser.run VFLParser.mainParser input of
+            Ok _ ->
+                Html.text ""
+
+            Err _ ->
+                input
+                    |> String.split "\n"
+                    |> List.indexedMap
+                        (\i l ->
+                            String.padLeft 3 ' ' (String.fromInt (i + 1))
+                                ++ " "
+                                ++ l
+                        )
+                    |> String.join "\n"
+                    |> Html.text
+                    |> List.singleton
+                    |> Html.pre []
         , case Parser.run VFLParser.mainParser input of
             Ok vfl ->
                 Svg.svg
@@ -183,27 +188,53 @@ displayVFL items =
                     in
                     go env tail (group :: acc)
 
-                (Command (Rectangle _ _ _)) :: tail ->
-                    Debug.todo "branch 'Command (Rectangle _ _ _) :: _' not implemented"
+                (Command (Rectangle ul br color)) :: tail ->
+                    let
+                        ( x, y ) =
+                            asPoint ul
+
+                        ( ox, oy ) =
+                            asPoint br
+
+                        w =
+                            ox - x
+
+                        h =
+                            oy - y
+
+                        c =
+                            asColor <| eval env color
+
+                        rect =
+                            Svg.rect
+                                [ Svg.x (String.fromInt x)
+                                , Svg.y (String.fromInt y)
+                                , Svg.width (String.fromInt w)
+                                , Svg.height (String.fromInt h)
+                                , Svg.fill (Color.toCssString c)
+                                ]
+                                []
+                    in
+                    go env tail (rect :: acc)
 
                 (Command (Ellipse _ _ _ _)) :: _ ->
                     Debug.todo "branch 'Command (Ellipse _ _ _ _) :: _' not implemented"
 
-                (Command (Polygon fillType start points color)) :: tail ->
+                (Command (Polygon fillType base points color)) :: tail ->
                     case asFill (eval env fillType) of
                         Filled ->
                             let
                                 c =
                                     asColor (eval env color)
 
+                                basePoint =
+                                    asPoint (eval env base)
+
                                 poly : Svg msg
                                 poly =
                                     Svg.polygon
                                         [ Svg.fill (Color.toCssString c)
-                                        , (start :: asList points)
-                                            |> List.map (asPoint >> pointToString)
-                                            |> String.join " "
-                                            |> Svg.points
+                                        , polygonPoints env basePoint points
                                         ]
                                         []
                             in
@@ -224,6 +255,21 @@ displayVFL items =
     go VFLParser.defaultEnv items []
 
 
+polygonPoints : Env -> Point -> Value -> Svg.Attribute msg
+polygonPoints env ( bx, by ) points =
+    asList points
+        |> List.map
+            (\p ->
+                let
+                    ( px, py ) =
+                        asPoint (eval env p)
+                in
+                pointToString ( bx + px, by + py )
+            )
+        |> String.join " "
+        |> Svg.points
+
+
 asPoint : Value -> Point
 asPoint value =
     case value of
@@ -231,7 +277,7 @@ asPoint value =
             p
 
         _ ->
-            Debug.todo "asPoint"
+            Debug.todo ("Expected Point, got " ++ Debug.toString value)
 
 
 asList : Value -> List Value
@@ -241,7 +287,7 @@ asList value =
             l
 
         _ ->
-            Debug.todo "asList"
+            Debug.todo ("Expected List, got " ++ Debug.toString value)
 
 
 asFill : Value -> Fill
@@ -251,7 +297,7 @@ asFill value =
             f
 
         _ ->
-            Debug.todo "asFill"
+            Debug.todo ("Expected Fill, got " ++ Debug.toString value)
 
 
 asColor : Value -> Color
@@ -261,7 +307,7 @@ asColor value =
             c
 
         _ ->
-            Debug.todo "asColor"
+            Debug.todo ("Expected Color, got " ++ Debug.toString value)
 
 
 pointToString : Point -> String

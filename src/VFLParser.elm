@@ -15,6 +15,7 @@ module VFLParser exposing
 
 import Color exposing (Color)
 import Dict exposing (Dict)
+import Hex
 import Parser exposing ((|.), (|=), Parser)
 import Parser.Extras
 import Parser.Workaround
@@ -221,8 +222,13 @@ hexPair =
 
 
 hexFromString : String -> Parser Int
-hexFromString _ =
-    Debug.todo "hexFromString"
+hexFromString hx =
+    case Hex.fromString (String.toLower hx) of
+        Ok i ->
+            Parser.succeed i
+
+        Err e ->
+            Parser.problem e
 
 
 variableParser : Parser Item

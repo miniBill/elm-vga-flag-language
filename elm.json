@@ -14,7 +14,8 @@
             "elm/parser": "1.1.0",
             "elm/svg": "1.0.1",
             "myrho/elm-parser-extras": "1.0.1",
-            "pithub/elm-parser-bug-workaround": "1.0.0"
+            "pithub/elm-parser-bug-workaround": "1.0.0",
+            "rtfeldman/elm-hex": "1.0.0"
         },
         "indirect": {
             "elm/time": "1.0.0",

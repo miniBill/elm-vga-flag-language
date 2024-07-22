@@ -1,6 +1,10 @@
 module VFLParser exposing
-    ( Env
+    ( Command(..)
+    , Env
+    , Fill(..)
     , Item(..)
+    , LineType(..)
+    , Point
     , Structure(..)
     , Value(..)
     , defaultEnv
@@ -23,10 +27,10 @@ type Item
 
 
 type Command
-    = Rectangle Point Point Color
-    | Ellipse Point Int Int Color
-    | Polygon Fill Point (List Point) Color
-    | Lines LineType Point (List Point) Color
+    = Rectangle Point Point Value
+    | Ellipse Point Int Int Value
+    | Polygon Fill Point (List Point) Value
+    | Lines LineType Point (List Point) Value
     | Image String
 
 
@@ -104,7 +108,7 @@ commandParser =
             |. symbol ","
             |= pointParser
             |. symbol ","
-            |= colorParser
+            |= valueParser
         , Parser.succeed Ellipse
             |. symbol "Ellipse"
             |= pointParser
@@ -113,7 +117,7 @@ commandParser =
             |. symbol ","
             |= intParser
             |. symbol ","
-            |= colorParser
+            |= valueParser
         , Parser.succeed Polygon
             |. symbol "Polygon"
             |= fillParser
@@ -122,7 +126,7 @@ commandParser =
             |. symbol ","
             |= pointListParser
             |. symbol ","
-            |= colorParser
+            |= valueParser
         , Parser.succeed Lines
             |. symbol "Lines"
             |= lineTypeParser
@@ -131,7 +135,7 @@ commandParser =
             |. symbol ","
             |= pointListParser
             |. symbol ","
-            |= colorParser
+            |= valueParser
         , Parser.succeed Image
             |. symbol "Image"
             |= stringParser
@@ -322,7 +326,7 @@ spaces =
     in
     spc
         |. Parser.oneOf
-            [ Parser.succeed ()
-            , Parser.Workaround.lineCommentAfter "//"
+            [ Parser.Workaround.lineCommentAfter "//"
                 |. Parser.lazy (\_ -> spaces)
+            , Parser.succeed ()
             ]

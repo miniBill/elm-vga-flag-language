@@ -9,7 +9,7 @@ import Html.Events
 import Parser
 import Svg exposing (Svg)
 import Svg.Attributes as Svg
-import VFLParser exposing (Env, Item(..), Structure(..), Value(..))
+import VFLParser exposing (Command(..), Env, Fill(..), Item(..), Point, Structure(..), Value(..))
 
 
 type alias Model =
@@ -59,7 +59,8 @@ height =
 
 view : Model -> Html Msg
 view input =
-    Html.div []
+    Html.div
+        [ Html.Attributes.style "padding" "10px" ]
         [ Html.textarea
             [ Html.Attributes.value input
             , Html.Events.onInput identity
@@ -67,6 +68,18 @@ view input =
             , Html.Attributes.cols 30
             ]
             []
+        , input
+            |> String.split "\n"
+            |> List.indexedMap
+                (\i l ->
+                    String.padLeft 3 ' ' (String.fromInt (i + 1))
+                        ++ " "
+                        ++ l
+                )
+            |> String.join "\n"
+            |> Html.text
+            |> List.singleton
+            |> Html.pre []
         , case Parser.run VFLParser.mainParser input of
             Ok vfl ->
                 Svg.svg
@@ -74,8 +87,9 @@ view input =
                         |> List.map String.fromInt
                         |> String.join " "
                         |> Svg.viewBox
-                    , Html.Attributes.style "width" "100%"
-                    , Html.Attributes.style "max-height" "90vh"
+                    , Html.Attributes.style "width" "90%"
+                    , Html.Attributes.style "padding-left" "5%"
+                    , Html.Attributes.style "max-height" "70vh"
                     ]
                     (displayVFL vfl)
 
@@ -165,10 +179,50 @@ displayVFL items =
                     in
                     go env tail (group :: acc)
 
-                (Command _) :: tail ->
-                    Debug.todo "branch 'Command _ :: _' not implemented"
+                (Command (Rectangle _ _ _)) :: tail ->
+                    Debug.todo "branch 'Command (Rectangle _ _ _) :: _' not implemented"
+
+                (Command (Ellipse _ _ _ _)) :: _ ->
+                    Debug.todo "branch 'Command (Ellipse _ _ _ _) :: _' not implemented"
+
+                (Command (Polygon Filled start points color)) :: tail ->
+                    case eval env color of
+                        Color c ->
+                            let
+                                poly : Svg msg
+                                poly =
+                                    Svg.polygon
+                                        [ Svg.fill (Color.toCssString c)
+                                        , (start :: points)
+                                            |> List.map pointToString
+                                            |> String.join " "
+                                            |> Svg.points
+                                        ]
+                                        []
+                            in
+                            go env tail (poly :: acc)
+
+                        _ ->
+                            Debug.todo (Debug.toString color ++ " is not a color ")
+
+                (Command (Polygon Outlined _ _ _)) :: _ ->
+                    Debug.todo "branch 'Command (Polygon Outlined _ _ _) :: _' not implemented"
+
+                (Command (Polygon ThickOutlines _ _ _)) :: _ ->
+                    Debug.todo "branch 'Command (Polygon ThickOutlines _ _ _) :: _' not implemented"
+
+                (Command (Lines _ _ _ _)) :: _ ->
+                    Debug.todo "branch 'Command (Lines _ _ _ _) :: _' not implemented"
+
+                (Command (Image _)) :: _ ->
+                    Debug.todo "branch 'Command (Image _) :: _' not implemented"
     in
     go VFLParser.defaultEnv items []
+
+
+pointToString : Point -> String
+pointToString ( x, y ) =
+    String.fromInt x ++ "," ++ String.fromInt y
 
 
 eval : Env -> VFLParser.Value -> VFLParser.Value

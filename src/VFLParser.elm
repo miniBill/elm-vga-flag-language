@@ -1,6 +1,7 @@
 module VFLParser exposing
     ( Command(..)
     , Env
+    , Expr(..)
     , Fill(..)
     , Item(..)
     , LineType(..)
@@ -8,9 +9,7 @@ module VFLParser exposing
     , Structure(..)
     , Value(..)
     , defaultEnv
-    , item
     , mainParser
-    , spaces
     )
 
 import Color exposing (Color)
@@ -22,22 +21,22 @@ import Parser.Workaround
 
 
 type Item
-    = Variable String Value
+    = Variable String Expr
     | Structure Structure
     | Command Command
 
 
 type Command
-    = Rectangle Value Value Value
-    | Ellipse Value Value Value Value
-    | Polygon Value Value Value Value
-    | Lines Value Value Value Value
-    | Image Value
+    = Rectangle Expr Expr Expr
+    | Ellipse Expr Expr Expr Expr
+    | Polygon Expr Expr Expr Expr
+    | Lines Expr Expr Expr Expr
+    | Image Expr
 
 
 type Structure
-    = Vertical (List Value)
-    | Horizontal (List Value)
+    = Vertical (List Expr)
+    | Horizontal (List Expr)
 
 
 type Value
@@ -48,7 +47,13 @@ type Value
     | String String
     | Point Point
     | List (List Value)
-    | Name String
+
+
+type Expr
+    = EValue Value
+    | EVariable String
+    | EPoint Expr Expr
+    | EList (List Expr)
 
 
 type Fill
@@ -105,41 +110,41 @@ commandParser =
     Parser.oneOf
         [ Parser.succeed Rectangle
             |. symbol "Rectangle"
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
         , Parser.succeed Ellipse
             |. symbol "Ellipse"
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
         , Parser.succeed Polygon
             |. symbol "Polygon"
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
         , Parser.succeed Lines
             |. symbol "Lines"
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
             |. symbol ","
-            |= valueParser
+            |= exprParser
         , Parser.succeed Image
             |. symbol "Image"
-            |= valueParser
+            |= exprParser
         ]
 
 
@@ -186,7 +191,7 @@ structureParser =
             , separator = ""
             , spaces = spaces
             , trailing = Parser.Optional
-            , item = valueParser
+            , item = exprParser
             }
         |. spaces
 
@@ -238,7 +243,7 @@ variableParser =
         |= Parser.getChompedString (Parser.chompWhile isNameChar)
         |. spaces
         |. symbol "="
-        |= valueParser
+        |= exprParser
 
 
 isNameChar : Char -> Bool
@@ -250,31 +255,31 @@ isNameChar c =
         && (c /= '\t')
 
 
-valueParser : Parser Value
-valueParser =
+exprParser : Parser Expr
+exprParser =
     Parser.oneOf
-        [ Parser.map Color colorParser
-        , Parser.map Int intParser
-        , Parser.map String stringParser
-        , Parser.succeed List
+        [ Parser.map (EValue << Color) colorParser
+        , Parser.map (EValue << Int) intParser
+        , Parser.map (EValue << String) stringParser
+        , Parser.succeed EList
             |= listParser
-        , Parser.map Point pointParser
-        , Parser.succeed Name
+        , pointParser
+        , Parser.succeed EVariable
             |. Parser.symbol "$"
             |= Parser.getChompedString (Parser.chompWhile isNameChar)
             |. spaces
-        , Parser.map Fill fillParser
-        , Parser.map LineType lineTypeParser
+        , Parser.map (EValue << Fill) fillParser
+        , Parser.map (EValue << LineType) lineTypeParser
         ]
 
 
-listParser : Parser (List Value)
+listParser : Parser (List Expr)
 listParser =
     Parser.sequence
         { start = "["
         , spaces = spaces
         , separator = ","
-        , item = Parser.lazy (\_ -> valueParser)
+        , item = Parser.lazy (\_ -> exprParser)
         , end = "]"
         , trailing = Parser.Forbidden
         }
@@ -290,13 +295,13 @@ stringParser =
         |. spaces
 
 
-pointParser : Parser Point
+pointParser : Parser Expr
 pointParser =
-    Parser.succeed Tuple.pair
+    Parser.succeed EPoint
         |. symbol "("
-        |= intParser
+        |= Parser.lazy (\_ -> exprParser)
         |. symbol ","
-        |= intParser
+        |= Parser.lazy (\_ -> exprParser)
         |. symbol ")"
 
 

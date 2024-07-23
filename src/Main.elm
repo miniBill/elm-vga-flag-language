@@ -9,7 +9,7 @@ import Html.Events
 import Parser
 import Svg exposing (Svg)
 import Svg.Attributes as Svg
-import VFLParser exposing (Command(..), Env, Fill(..), Item(..), Point, Structure(..), Value(..))
+import VFLParser exposing (Command(..), Env, Expr(..), Fill(..), Item(..), Point, Structure(..), Value(..))
 
 
 type alias Model =
@@ -194,10 +194,10 @@ displayVFL items =
                 (Command (Rectangle ul br color)) :: tail ->
                     let
                         ( x, y ) =
-                            asPoint ul
+                            asPoint (eval env ul)
 
                         ( ox, oy ) =
-                            asPoint br
+                            asPoint (eval env br)
 
                         w =
                             ox - x
@@ -293,19 +293,24 @@ displayVFL items =
     go VFLParser.defaultEnv items []
 
 
-polygonPoints : Env -> Point -> Value -> Svg.Attribute msg
+polygonPoints : Env -> Point -> Expr -> Svg.Attribute msg
 polygonPoints env ( bx, by ) points =
-    asList points
+    points
+        |> eval env
+        |> asListOf asPoint
         |> List.map
-            (\p ->
-                let
-                    ( px, py ) =
-                        asPoint (eval env p)
-                in
+            (\( px, py ) ->
                 pointToString ( bx + px, by + py )
             )
         |> String.join " "
         |> Svg.points
+
+
+asListOf : (Value -> v) -> Value -> List v
+asListOf itemMap value =
+    value
+        |> asList
+        |> List.map itemMap
 
 
 asPoint : Value -> Point
@@ -353,19 +358,32 @@ pointToString ( x, y ) =
     String.fromInt x ++ "," ++ String.fromInt y
 
 
-eval : Env -> VFLParser.Value -> VFLParser.Value
+eval : Env -> VFLParser.Expr -> VFLParser.Value
 eval env val =
     case val of
-        List children ->
+        EList children ->
             List (List.map (eval env) children)
 
-        Name n ->
+        EVariable n ->
             case Dict.get n env of
                 Just v ->
                     v
 
                 Nothing ->
-                    Debug.todo "branch 'Name _' not implemented"
+                    Debug.todo <| "Undefined variable: " ++ n
 
-        _ ->
-            val
+        EPoint l r ->
+            case eval env l of
+                Int li ->
+                    case eval env r of
+                        Int ri ->
+                            Point ( li, ri )
+
+                        rv ->
+                            Debug.todo (Debug.toString r ++ " (" ++ Debug.toString rv ++ ") is not an integer")
+
+                lv ->
+                    Debug.todo (Debug.toString l ++ " (" ++ Debug.toString lv ++ ") is not an integer")
+
+        EValue value ->
+            value

@@ -312,12 +312,38 @@ displayStep elem ( env, acc ) =
                 (evalAs asColor env color)
                 |> prepend
 
-        Command (Lines _ _ _ _) ->
-            -- Thick is 3 pixels
-            Debug.todo "branch 'Command (Lines _ _ _ _) :: _' not implemented"
+        Command (Lines tipe base points color) ->
+            Result.map4 viewPolygon
+                (evalAs asLineType env tipe
+                    |> Result.map
+                        (\lt ->
+                            case lt of
+                                Regular ->
+                                    Outlined
 
-        Command (Image _) ->
-            Debug.todo "branch 'Command (Image _) :: _' not implemented"
+                                Thicc ->
+                                    ThickOutlines
+                        )
+                )
+                (evalAs asPoint env base)
+                (evalAs (asListOf asPoint) env points)
+                (evalAs asColor env color)
+                |> prepend
+
+        Command (Image url) ->
+            Result.map viewImage
+                (evalAs asString env url)
+                |> prepend
+
+
+viewImage : String -> Svg msg
+viewImage url =
+    Svg.image
+        [ Svg.width (String.fromInt width)
+        , Svg.height (String.fromInt height)
+        , Svg.xlinkHref url
+        ]
+        []
 
 
 viewEllipse : Point -> Int -> Int -> Color -> Svg msg
@@ -484,6 +510,16 @@ asFill value =
             Err ("Expected Fill, got " ++ valueToString value)
 
 
+asLineType : Value -> Result String LineType
+asLineType value =
+    case value of
+        LineType t ->
+            Ok t
+
+        _ ->
+            Err ("Expected LineType, got " ++ valueToString value)
+
+
 asColor : Value -> Result String Color
 asColor value =
     case value of
@@ -492,6 +528,16 @@ asColor value =
 
         _ ->
             Err ("Expected Color, got " ++ valueToString value)
+
+
+asString : Value -> Result String String
+asString value =
+    case value of
+        String s ->
+            Ok s
+
+        _ ->
+            Err ("Expected String, got " ++ valueToString value)
 
 
 pointToString : Point -> String

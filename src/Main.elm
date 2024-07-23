@@ -246,8 +246,13 @@ displayStep elem ( env, acc ) =
                 (evalAs asColor env color)
                 |> prepend
 
-        Command (Ellipse _ _ _ _) ->
-            Debug.todo "branch 'Command (Ellipse _ _ _ _) :: _' not implemented"
+        Command (Ellipse center w h color) ->
+            Result.map4 viewEllipse
+                (evalAs asPoint env center)
+                (evalAs asInt env w)
+                (evalAs asInt env h)
+                (evalAs asColor env color)
+                |> prepend
 
         Command (Polygon fill base points color) ->
             Result.map4 viewPolygon
@@ -263,6 +268,18 @@ displayStep elem ( env, acc ) =
 
         Command (Image _) ->
             Debug.todo "branch 'Command (Image _) :: _' not implemented"
+
+
+viewEllipse : Point -> Int -> Int -> Color -> Svg msg
+viewEllipse ( cx, cy ) w h color =
+    Svg.ellipse
+        [ Svg.cx (String.fromInt cx)
+        , Svg.cy (String.fromInt cy)
+        , Svg.rx (String.fromInt <| w // 2)
+        , Svg.ry (String.fromInt <| h // 2)
+        , Svg.fill (Color.toCssString color)
+        ]
+        []
 
 
 viewRectangle : ( Int, Int ) -> ( Int, Int ) -> Color -> Svg msg

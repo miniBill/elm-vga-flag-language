@@ -241,12 +241,47 @@ displayVFL items =
                             go env tail (poly :: acc)
 
                         Outlined ->
-                            Debug.todo "branch 'Outlined' not implemented"
+                            let
+                                c =
+                                    asColor (eval env color)
+
+                                basePoint =
+                                    asPoint (eval env base)
+
+                                poly : Svg msg
+                                poly =
+                                    Svg.polygon
+                                        [ Svg.strokeWidth "1"
+                                        , Svg.stroke (Color.toCssString c)
+                                        , Svg.fill "transparent"
+                                        , polygonPoints env basePoint points
+                                        ]
+                                        []
+                            in
+                            go env tail (poly :: acc)
 
                         ThickOutlines ->
-                            Debug.todo "branch 'ThickOutlines' not implemented"
+                            let
+                                c =
+                                    asColor (eval env color)
+
+                                basePoint =
+                                    asPoint (eval env base)
+
+                                poly : Svg msg
+                                poly =
+                                    Svg.polygon
+                                        [ Svg.strokeWidth "3"
+                                        , Svg.stroke (Color.toCssString c)
+                                        , Svg.fill "transparent"
+                                        , polygonPoints env basePoint points
+                                        ]
+                                        []
+                            in
+                            go env tail (poly :: acc)
 
                 (Command (Lines _ _ _ _)) :: _ ->
+                    -- Thick is 3 pixels
                     Debug.todo "branch 'Command (Lines _ _ _ _) :: _' not implemented"
 
                 (Command (Image _)) :: _ ->

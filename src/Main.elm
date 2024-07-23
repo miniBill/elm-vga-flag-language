@@ -3,14 +3,16 @@ module Main exposing (main)
 import Browser
 import Color exposing (Color)
 import Dict
+import Dict.Extra
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
+import Json.Encode
 import Parser
 import Result.Extra
 import Svg exposing (Svg)
 import Svg.Attributes as Svg
-import VFLParser exposing (Command(..), Env, Expr(..), Fill(..), Item(..), Point, Structure(..), Value(..))
+import VFLParser exposing (Command(..), Env, Expr(..), Fill(..), Item(..), LineType(..), Point, Structure(..), Value(..))
 
 
 type alias Model =
@@ -114,23 +116,70 @@ view input =
 
             Err errs ->
                 errs
+                    |> Dict.Extra.groupBy (\{ row, col } -> ( row, col ))
+                    |> Dict.toList
                     |> List.map
-                        (\err ->
-                            Html.div []
-                                [ Html.text (viewError err)
-                                ]
+                        (\( ( row, col ), group ) ->
+                            group
+                                |> List.map (\{ problem } -> problemToString problem)
+                                |> (::)
+                                    (String.fromInt row
+                                        ++ ":"
+                                        ++ String.fromInt col
+                                    )
+                                |> String.join " "
+                                |> Html.text
+                                |> List.singleton
+                                |> Html.div []
                         )
                     |> Html.div []
         ]
 
 
-viewError : Parser.DeadEnd -> String
-viewError { row, col, problem } =
-    String.fromInt row
-        ++ ":"
-        ++ String.fromInt col
-        ++ " "
-        ++ Debug.toString problem
+problemToString : Parser.Problem -> String
+problemToString problem =
+    case problem of
+        Parser.Expecting e ->
+            "Expecting " ++ e
+
+        Parser.ExpectingInt ->
+            "Expecting int"
+
+        Parser.ExpectingHex ->
+            "Expecting hex"
+
+        Parser.ExpectingOctal ->
+            "Expecting octal"
+
+        Parser.ExpectingBinary ->
+            "Expecting binary"
+
+        Parser.ExpectingFloat ->
+            "Expecting float"
+
+        Parser.ExpectingNumber ->
+            "Expecting number"
+
+        Parser.ExpectingVariable ->
+            "Expecting variable"
+
+        Parser.ExpectingSymbol symbol ->
+            "Expecting symbol: " ++ symbol
+
+        Parser.ExpectingKeyword keyword ->
+            "Expecting keyword: " ++ keyword
+
+        Parser.ExpectingEnd ->
+            "Expecting end"
+
+        Parser.UnexpectedChar ->
+            "Unexpected Char"
+
+        Parser.BadRepeat ->
+            "Bar repeat"
+
+        Parser.Problem p ->
+            p
 
 
 displayVFL : List VFLParser.Item -> Result String (List (Svg msg))
@@ -371,7 +420,48 @@ asInt value =
 
 valueToString : Value -> String
 valueToString value =
-    Debug.toString value
+    case value of
+        Int i ->
+            String.fromInt i
+
+        Color c ->
+            Color.toCssString c
+
+        Fill f ->
+            case f of
+                Filled ->
+                    "Filled"
+
+                Outlined ->
+                    "Outlined"
+
+                ThickOutlines ->
+                    "ThickOutlines"
+
+        LineType t ->
+            case t of
+                Thicc ->
+                    "Thick"
+
+                Regular ->
+                    "Regular"
+
+        String s ->
+            Json.Encode.string s
+                |> Json.Encode.encode 0
+
+        Point ( x, y ) ->
+            "("
+                ++ String.fromInt x
+                ++ ", "
+                ++ String.fromInt y
+                ++ ")"
+
+        List children ->
+            "["
+                ++ String.join ", "
+                    (List.map valueToString children)
+                ++ "]"
 
 
 asList : Value -> Result String (List Value)

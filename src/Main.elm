@@ -64,7 +64,11 @@ height =
 view : Model -> Html Msg
 view input =
     Html.div
-        [ Html.Attributes.style "padding" "10px" ]
+        [ Html.Attributes.style "padding" "8px"
+        , Html.Attributes.style "gap" "8px"
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "flex-direction" "column"
+        ]
         [ Html.textarea
             [ Html.Attributes.value input
             , Html.Events.onInput identity
@@ -96,8 +100,7 @@ view input =
                         |> List.map String.fromInt
                         |> String.join " "
                         |> Svg.viewBox
-                    , Html.Attributes.style "width" "90%"
-                    , Html.Attributes.style "padding-left" "5%"
+                    , Html.Attributes.style "width" "100%"
                     , Html.Attributes.style "max-height" "70vh"
                     ]
                     (displayVFL vfl)

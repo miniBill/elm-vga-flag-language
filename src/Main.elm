@@ -73,8 +73,9 @@ view input =
         [ Html.textarea
             [ Html.Attributes.value input
             , Html.Events.onInput identity
-            , Html.Attributes.rows 10
-            , Html.Attributes.cols 30
+            , Html.Attributes.rows 100
+            , Html.Attributes.style "resize" "none"
+            , Html.Attributes.style "max-height" "200px"
             ]
             []
         , case Parser.run VFLParser.mainParser input of
@@ -107,7 +108,7 @@ view input =
                                 |> String.join " "
                                 |> Svg.viewBox
                             , Html.Attributes.style "width" "100%"
-                            , Html.Attributes.style "max-height" "70vh"
+                            , Html.Attributes.style "max-height" "calc(100dvh - 236px)"
                             ]
                             svg
 

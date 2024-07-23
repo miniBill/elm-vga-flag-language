@@ -267,12 +267,15 @@ displayStep elem ( env, acc ) =
                 |> Result.map
                     (\colorList ->
                         let
+                            count : Int
                             count =
                                 List.length colors
 
+                            slice : Int
                             slice =
                                 width // count
 
+                            viewSlice : Int -> Color -> Svg msg
                             viewSlice i color =
                                 Svg.rect
                                     [ Svg.x <| String.fromInt (slice * i)
@@ -361,9 +364,11 @@ viewEllipse ( cx, cy ) w h color =
 viewRectangle : ( Int, Int ) -> ( Int, Int ) -> Color -> Svg msg
 viewRectangle ( x, y ) ( ox, oy ) color =
     let
+        w : Int
         w =
             ox - x
 
+        h : Int
         h =
             oy - y
     in
